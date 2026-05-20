@@ -1,0 +1,37 @@
+name: presense
+description: "PreSense — predictive meltdown early warning for neurodiverse users."
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1
+  fl_chart: ^0.68.0
+  sqflite: ^2.3.3
+  path: ^1.9.0
+  flutter_local_notifications: ^17.2.2
+  geolocator: ^11.0.0
+  sensors_plus: ^4.0.2
+  permission_handler: ^11.3.1
+  flutter_onnxruntime: ^1.7.1
+  flutter_blue_plus: ^1.31.13
+  cupertino_icons: ^1.0.8
+  noise_meter: ^5.0.2
+  url_launcher: ^6.2.6
+  shared_preferences: ^2.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/models/presense.onnx
