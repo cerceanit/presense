@@ -32,3 +32,8 @@ app.*.map.json
 .env.*
 assets/models/presense.tflite
 lib/models/*.onnx
+/ios/
+/macos/
+/linux/
+/windows/
+/web/
