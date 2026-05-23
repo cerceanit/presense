@@ -1,10 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../core/theme.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../core/app_colors.dart';
 import '../../providers/stress_provider.dart';
-import '../home/home_screen.dart';
-import 'dart:async';
+import '../shell/main_shell.dart';
 
 class CalibrationScreen extends ConsumerStatefulWidget {
   const CalibrationScreen({super.key});
@@ -13,32 +14,19 @@ class CalibrationScreen extends ConsumerStatefulWidget {
   ConsumerState<CalibrationScreen> createState() => _CalibrationScreenState();
 }
 
-class _CalibrationScreenState extends ConsumerState<CalibrationScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late StreamSubscription _timerSub;
-  final TextEditingController _phoneController = TextEditingController();
-  int _secondsLeft = 180;
+class _CalibrationScreenState extends ConsumerState<CalibrationScreen> {
+  static const int _totalSeconds = 180;
+
+  late StreamSubscription<dynamic> _timerSub;
+  int _secondsLeft = _totalSeconds;
   bool _done = false;
-  bool _numberSaved = false;
 
   @override
   void initState() {
     super.initState();
 
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(minutes: 3),
-    )..forward();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(stressProvider.notifier).startCalibration();
-      final prefs = await SharedPreferences.getInstance();
-      final saved = prefs.getString('caregiver_number') ?? '';
-      if (saved.isNotEmpty) {
-        _phoneController.text = saved.replaceFirst('+', '');
-        setState(() => _numberSaved = true);
-      }
     });
 
     _timerSub = Stream.periodic(const Duration(seconds: 1)).listen((_) {
@@ -57,7 +45,7 @@ class _CalibrationScreenState extends ConsumerState<CalibrationScreen>
           if (mounted) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              MaterialPageRoute(builder: (_) => const MainShell()),
             );
           }
         });
@@ -67,285 +55,163 @@ class _CalibrationScreenState extends ConsumerState<CalibrationScreen>
 
   @override
   void dispose() {
-    _controller.dispose();
     _timerSub.cancel();
-    _phoneController.dispose();
     super.dispose();
   }
 
   String get _timeLabel {
-    int min = _secondsLeft ~/ 60;
-    int sec = _secondsLeft % 60;
+    final min = _secondsLeft ~/ 60;
+    final sec = _secondsLeft % 60;
     return '$min:${sec.toString().padLeft(2, '0')}';
-  }
-
-  Future<void> _saveNumber() async {
-    final number = _phoneController.text.trim();
-    if (number.isEmpty) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('caregiver_number', '+$number');
-    setState(() => _numberSaved = true);
-    FocusScope.of(context).unfocus();
   }
 
   void _skip() {
     ref.read(stressProvider.notifier).finishCalibration();
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      MaterialPageRoute(builder: (_) => const MainShell()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final stress = ref.watch(stressProvider);
-    final notifier = ref.read(stressProvider.notifier);
-    double progress = 1 - (_secondsLeft / 180);
-    int samplesCollected = notifier.calibrationProgress;
+    final sampleCount = stress.calibrationSamples;
+    final progress = 1 - (_secondsLeft / _totalSeconds);
+
+    final titleStyle = GoogleFonts.nunito(
+      fontSize: 24,
+      fontWeight: FontWeight.w800,
+      color: AppColors.textPrimary,
+    );
+    final subtitleStyle = GoogleFonts.nunito(
+      fontSize: 16,
+      color: AppColors.textSecondary,
+    );
 
     return Scaffold(
-      backgroundColor: const Color(0xFF080808),
+      backgroundColor: AppColors.primaryBackground,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 24),
-
-              const Text(
-                'PRESENSE',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 4,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Baseline Calibration',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.3),
-                  fontSize: 11,
-                  letterSpacing: 2,
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              Text(
-                _done ? 'Calibration Complete' : 'Learning Your Baseline',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              const SizedBox(height: 60),
+              Text('Calibrating PreSense', style: titleStyle, textAlign: TextAlign.center),
               const SizedBox(height: 8),
               Text(
-                _done
-                    ? 'Your personal baseline is ready.'
-                    : 'Sit quietly while we learn your resting state.\nDo not move too much.',
-                style: const TextStyle(
-                  color: Color(0xFF666666),
-                  fontSize: 13,
-                  height: 1.6,
-                ),
+                'Stay still and breathe normally',
+                style: subtitleStyle,
+                textAlign: TextAlign.center,
               ),
-
               const SizedBox(height: 40),
-
-              Center(
-                child: SizedBox(
-                  width: 180,
-                  height: 180,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      AnimatedBuilder(
-                        animation: _controller,
-                        builder: (_, __) => CircularProgressIndicator(
-                          value: progress,
-                          strokeWidth: 8,
-                          backgroundColor: const Color(0xFF1A1A1A),
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            _done
-                                ? const Color(0xFF2D6A4F)
-                                : const Color(0xFFB5B5B5),
-                          ),
-                        ),
-                      ),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _done ? 'OK' : _timeLabel,
-                            style: TextStyle(
-                              color: _done
-                                  ? const Color(0xFF2D6A4F)
-                                  : Colors.white,
-                              fontSize: _done ? 32 : 36,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                          if (!_done)
-                            Text(
-                              '$samplesCollected samples',
-                              style: const TextStyle(
-                                color: Color(0xFF2D6A4F),
-                                fontSize: 10,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              _readingTile('HR', '${stress.hr.toInt()} bpm', 'Heart Rate'),
-              const SizedBox(height: 12),
-              _readingTile('MOV', stress.movement.toStringAsFixed(2), 'Movement'),
-              const SizedBox(height: 12),
-              _readingTile('HRV', '${stress.hrv.toInt()} ms', 'HRV'),
-
-              const SizedBox(height: 32),
-
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF141414),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: _numberSaved
-                        ? const Color(0xFF2D6A4F)
-                        : const Color(0xFF333333),
-                  ),
-                ),
-                child: Row(
+              SizedBox(
+                width: 200,
+                height: 200,
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'CAREGIVER',
-                          style: TextStyle(
-                            color: Color(0xFF2D6A4F),
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.5,
-                          ),
+                    SizedBox(
+                      width: 200,
+                      height: 200,
+                      child: CircularProgressIndicator(
+                        value: progress,
+                        strokeWidth: 12,
+                        backgroundColor: AppColors.border,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppColors.primaryAccent,
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Text(
-                              '+',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                            ),
-                            SizedBox(
-                              width: 160,
-                              child: TextField(
-                                controller: _phoneController,
-                                keyboardType: TextInputType.phone,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                ),
-                                decoration: const InputDecoration(
-                                  hintText: '7 XXX XXX XXXX',
-                                  hintStyle: TextStyle(
-                                    color: Color(0xFF444444),
-                                    fontSize: 13,
-                                  ),
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                                onChanged: (_) {
-                                  if (_numberSaved) {
-                                    setState(() => _numberSaved = false);
-                                  }
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: _saveNumber,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _numberSaved
-                              ? const Color(0xFF2D6A4F).withOpacity(0.2)
-                              : const Color(0xFF2D6A4F),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          _numberSaved ? 'SAVED' : 'SAVE',
-                          style: TextStyle(
-                            color: _numberSaved
-                                ? const Color(0xFF2D6A4F)
-                                : Colors.black,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
+                        strokeCap: StrokeCap.round,
                       ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _done ? 'Done' : _timeLabel,
+                          style: GoogleFonts.nunito(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        if (!_done) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'seconds remaining',
+                            style: GoogleFonts.nunito(
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 8),
-
+              const SizedBox(height: 12),
               Text(
-                _numberSaved
-                    ? 'Caregiver will be called during emergencies'
-                    : 'Enter a number to enable emergency calls',
-                style: const TextStyle(
-                  color: Color(0xFF444444),
-                  fontSize: 11,
-                  letterSpacing: 1,
+                'Samples collected: $sampleCount',
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryAccent,
                 ),
               ),
-
               const SizedBox(height: 32),
-
+              Row(
+                children: [
+                  Expanded(
+                    child: _InfoCard(
+                      label: 'Heart Rate',
+                      value: stress.hr > 0 ? '${stress.hr.round()} bpm' : '--',
+                      icon: Icons.favorite_rounded,
+                      iconColor: AppColors.critical,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _InfoCard(
+                      label: 'Samples',
+                      value: '$sampleCount',
+                      icon: Icons.analytics_outlined,
+                      iconColor: AppColors.primaryAccent,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _InfoCard(
+                      label: 'Status',
+                      value: _done ? 'Done ✓' : 'Collecting...',
+                      icon: Icons.sensors_rounded,
+                      iconColor: AppColors.success,
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Text(
+                'PreSense is learning your baseline patterns',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                  color: AppColors.mutedText,
+                ),
+              ),
+              const SizedBox(height: 16),
               if (!_done)
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: _skip,
-                    child: const Text(
-                      'SKIP CALIBRATION',
-                      style: TextStyle(
-                        color: Color(0xFF444444),
-                        fontSize: 11,
-                        letterSpacing: 2,
-                      ),
+                TextButton(
+                  onPressed: _skip,
+                  child: Text(
+                    'Skip calibration',
+                    style: GoogleFonts.nunito(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-
               const SizedBox(height: 24),
             ],
           ),
@@ -353,44 +219,56 @@ class _CalibrationScreenState extends ConsumerState<CalibrationScreen>
       ),
     );
   }
+}
 
-  Widget _readingTile(String code, String value, String label) {
+class _InfoCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color iconColor;
+
+  const _InfoCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF141414),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Text(
-                code,
-                style: const TextStyle(
-                  color: Color(0xFF2D6A4F),
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.5,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFF666666),
-                  fontSize: 12,
-                ),
-              ),
-            ],
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: iconColor, size: 22),
+          const SizedBox(height: 10),
+          Text(
+            label,
+            style: GoogleFonts.nunito(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+            style: GoogleFonts.nunito(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
             ),
           ),
         ],

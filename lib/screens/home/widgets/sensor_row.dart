@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme.dart';
+import '../../../core/app_colors.dart';
 
 class SensorRow extends StatelessWidget {
   final int hr;
@@ -51,14 +51,14 @@ class SensorRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(16),
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(AppColors.radius),
         ),
         child: Column(
           children: [
             Text(icon,
               style: const TextStyle(
-                color: AppTheme.calm,
+                color: AppColors.primaryAccent,
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.2,
@@ -66,13 +66,13 @@ class SensorRow extends StatelessWidget {
             const SizedBox(height: 6),
             Text(value,
               style: const TextStyle(
-                color: AppTheme.textPrimary,
+                color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
               )),
             Text(label,
               style: const TextStyle(
-                color: AppTheme.textSecondary,
+                color: AppColors.textSecondary,
                 fontSize: 10,
               )),
           ],

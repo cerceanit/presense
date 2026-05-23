@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "776029463623",
+    "project_id": "presense-f1142",
+    "storage_bucket": "presense-f1142.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:776029463623:android:1af22f32ef50dfa980bd62",
+        "android_client_info": {
+          "package_name": "com.example.presense"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1EmdBmg7nsUeFF7bQCqVdFBFXmRawvsE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
